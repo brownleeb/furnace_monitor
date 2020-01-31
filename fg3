@@ -1,0 +1,6 @@
+<form method=GET action=fg.php>
+<br>
+ Days:  <input type="number" name="days" min="1" max="1439">
+
+ <input type="submit" name="Submit" value="days">
+</form>
