@@ -1,0 +1,20 @@
+<html>
+<head>
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script type="text/javascript">
+  google.charts.load("current", {packages:["timeline"]});
+  google.charts.setOnLoadCallback(drawChart);
+  function drawChart() {
+
+    var chart = new google.visualization.Timeline(document.getElementById('timeline-div'));
+    var dataTable = new google.visualization.DataTable();
+    dataTable.addColumn({ type: 'string', id: 'Day' });
+    dataTable.addColumn({ type: 'string', id: 'System' });
+    dataTable.addColumn({ type: 'date', id: 'Start' });
+    dataTable.addColumn({ type: 'date', id: 'End' });
+    dataTable.addRows([
+        [ 'Legend', 'HeatPump', new Date(0,0,0,08,00,00), new Date(0,0,0,11,00,00)],
+        [ 'Legend', 'Gas', new Date(0,0,0,11,00,00), new Date(0,0,0,14,00,00)],
+        [ 'Legend', 'Fan', new Date(0,0,0,14,00,00), new Date(0,0,0,17,00,00)],
+        [ 'Legend', 'Cool', new Date(0,0,0,17,00,00), new Date(0,0,0,20,00,00)],
