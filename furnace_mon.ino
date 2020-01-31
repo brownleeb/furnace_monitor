@@ -1,3 +1,11 @@
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define ONE_WIRE_BUS 9
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature sensors(&oneWire);
+float tempC;
+
 #define aref_voltage 3.273
 
 #define GAS 3
@@ -7,10 +15,9 @@
 #define FAN_CTRL 5
 
 int garagePin = 1;
-int returnTempPin = 2;
-int supplyTempPin = 3;
 int delay_tm = 500;
-int cooldown = 800;
+int cooldown = 3769;
+int delta = 711;
 bool fanRunning = false;
 
 bool gasOn = false;
@@ -18,11 +25,20 @@ bool heatOn = false;
 bool fanOn = false;
 bool coolOn = false;
 
+int gasPulses = 0;
+int heatPulses = 0;
+int fanPulses = 0;
+int coolPulses = 0;
+
 String dv;
+
+uint8_t supplyTemp[8] = { 0x28, 0xAE, 0x8A, 0xE3, 0x08, 0x00, 0x00, 0xC3 };
+uint8_t returnTemp[8] = { 0x28, 0xB7, 0x7B, 0xE3, 0x08, 0x00, 0x00, 0x65 };
 
 void setup(void)
 {
   Serial.begin(9600);
+  sensors.begin();  // Start up the library
   analogReference(EXTERNAL);
   pinMode(FAN_CTRL, OUTPUT);
   digitalWrite(FAN_CTRL, HIGH);
@@ -36,6 +52,11 @@ void setup(void)
   attachInterrupt(digitalPinToInterrupt(HEAT), detectHEAT, RISING);
   attachInterrupt(digitalPinToInterrupt(FAN), detectFAN, RISING);
   attachInterrupt(digitalPinToInterrupt(COOL), detectCOOL, RISING);
+}
+
+int systemOn()
+{
+  return gasOn or heatOn;
 }
 
 int readInts()
@@ -60,37 +81,20 @@ int readInts()
   return furn;
 }
 
-int furnTemp()
+int furnTemp(int pin)
 {
-  int  tempReading = analogRead(supplyTempPin);
-  tempReading = analogRead(supplyTempPin);
+  int  tempReading = analogRead(pin);
+  tempReading = analogRead(pin);
   return (((tempReading - 31) * 57576) / 10000) - 400;
-}
-
-void readTemps()
-{
-  int tempReading = analogRead(garagePin);
-  tempReading = analogRead(garagePin);
-  Serial.print((((tempReading - 31) * 57576) / 10000) - 400);
-
-  Serial.print(",");
-  tempReading = analogRead(supplyTempPin);
-  tempReading = analogRead(supplyTempPin);
-  Serial.print((((tempReading - 31) * 57576) / 10000) - 400);
-
-  Serial.print(",");
-  tempReading = analogRead(returnTempPin);
-  tempReading = analogRead(returnTempPin);
-  Serial.print((((tempReading - 31) * 57576) / 10000) - 400);
-  //  Serial.print((((((tempReading * 323535) - 50000000) / 100000) * 18) + 3200) / 10);
 }
 
 void loop(void)
 {
-  if (furnTemp() > cooldown)  {
+  sensors.requestTemperatures();
+  if (( sensors.getTemp(supplyTemp) > cooldown ) and (systemOn() == false))  {
     digitalWrite(FAN_CTRL, LOW);
   }
-  else if (fanRunning == false) {
+  else if ((fanRunning == false) and (sensors.getTemp(supplyTemp) < (cooldown - delta))) {
     digitalWrite(FAN_CTRL, HIGH);
   }
   if (Serial.available()) {
@@ -98,9 +102,23 @@ void loop(void)
     mode = Serial.read();
     switch (mode) {
       case 'P':
-        readTemps();
+        Serial.print(furnTemp(garagePin));
+        Serial.print(",");
+        Serial.print(sensors.getTemp(supplyTemp));
+        Serial.print(",");
+        Serial.print(sensors.getTemp(returnTemp));
+        Serial.print(",");
+        Serial.print(readInts());
         Serial.print(',');
-        Serial.println(readInts());
+        Serial.print(gasPulses);
+        Serial.print(',');
+        Serial.print(heatPulses);
+        Serial.print(',');
+        Serial.print(fanPulses);
+        Serial.print(',');
+        Serial.print(coolPulses);
+        gasPulses = heatPulses = coolPulses = fanPulses = 0;
+        Serial.println();
         break;
       case'F':
         digitalWrite(FAN_CTRL, LOW);
@@ -133,13 +151,17 @@ void loop(void)
 
 void detectGAS()  {
   gasOn = true;
+  gasPulses++;
 }
 void detectHEAT()  {
   heatOn = true;
+  heatPulses++;
 }
 void detectCOOL()  {
   coolOn = true;
+  coolPulses++;
 }
 void detectFAN()  {
   fanOn = true;
+  fanPulses++;
 }
