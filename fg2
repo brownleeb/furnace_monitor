@@ -1,0 +1,11 @@
+    ]);
+    var options = {
+        colors: ['yellow','orange','green','blue'],
+        timeline:  { showBarLabels: false },
+        hAxis: {
+             min: Date(0,0,0),
+             max: Date(23,59,59) }
+    };
+    chart.draw(dataTable, options);
+  }
+</script>
